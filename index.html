@@ -1,155 +1,435 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quiz</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quizzi</title>
+  <style>
+    * { box-sizing: border-box; }
 
-<style>
-body{
-    font-family: Arial, sans-serif;
-    background:#f5f5f5;
-    text-align:center;
-    padding:20px;
-}
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      color: #222;
+    }
 
-.quiz-container{
-    background:white;
-    max-width:500px;
-    margin:auto;
-    padding:25px;
-    border-radius:10px;
-    box-shadow:0 5px 15px rgba(0,0,0,0.15);
-}
+    .wrap {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 16px;
+    }
 
-button{
-    display:block;
-    width:100%;
-    margin:10px 0;
-    padding:12px;
-    font-size:16px;
-    border:none;
-    border-radius:6px;
-    background:#e0e0e0;
-}
+    .card {
+      background: #fff;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+      margin-top: 20px;
+    }
 
-button:hover{
-    background:#cfcfcf;
-    cursor:pointer;
-}
+    h1, h2, h3, p {
+      margin-top: 0;
+    }
 
-#nextBtn{
-    background:#4CAF50;
-    color:white;
-}
-</style>
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+      font-weight: bold;
+    }
+
+    .pill {
+      background: #eef2f7;
+      padding: 10px 14px;
+      border-radius: 12px;
+    }
+
+    .question-count {
+      margin-bottom: 10px;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .question {
+      font-size: 24px;
+      line-height: 1.35;
+      margin-bottom: 18px;
+    }
+
+    .answers {
+      display: grid;
+      gap: 12px;
+    }
+
+    button {
+      border: none;
+      border-radius: 14px;
+      padding: 14px 16px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .answer-btn {
+      background: #e9edf3;
+      text-align: left;
+    }
+
+    .answer-btn:hover {
+      background: #dfe6ee;
+    }
+
+    .answer-btn.correct {
+      background: #bfe8c8;
+    }
+
+    .answer-btn.wrong {
+      background: #f4b8b8;
+    }
+
+    .primary {
+      background: #1f7aec;
+      color: white;
+    }
+
+    .primary:hover {
+      background: #1668cc;
+    }
+
+    .secondary {
+      background: #d9dee5;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid #cfd6de;
+      font-size: 16px;
+      margin-bottom: 12px;
+    }
+
+    .players-list {
+      margin: 10px 0 16px;
+      padding-left: 18px;
+    }
+
+    .result-list {
+      padding-left: 0;
+      list-style: none;
+      margin: 0;
+    }
+
+    .result-list li {
+      background: #eef2f7;
+      padding: 12px 14px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+
+    .center {
+      text-align: center;
+    }
+
+    .small {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .spacer {
+      height: 12px;
+    }
+  </style>
 </head>
-
 <body>
+  <div class="wrap">
+    <div id="setupScreen" class="card">
+      <h1>Quizzi</h1>
+      <p>Mehrspieler-Quiz auf einem Handy. Jeder Spieler spielt nacheinander, am Ende gibt es eine Rangliste.</p>
 
-<div class="quiz-container">
+      <label for="playerCount"><strong>Wie viele Spieler?</strong></label>
+      <input id="playerCount" type="number" min="1" max="20" value="2" />
 
-<h2 id="question">Frage</h2>
+      <div id="playerInputs"></div>
 
-<div id="answers"></div>
+      <button class="primary" onclick="startGame()">Quiz starten</button>
+    </div>
 
-<button id="nextBtn" onclick="nextQuestion()" style="display:none;">Nächste Frage</button>
+    <div id="quizScreen" class="card hidden">
+      <div class="topbar">
+        <div class="pill" id="playerInfo">Spieler: -</div>
+        <div class="pill" id="scoreInfo">Punkte: 0</div>
+        <div class="pill" id="timerInfo">Zeit: 15</div>
+      </div>
 
-<h3 id="score"></h3>
+      <div class="question-count" id="questionCount"></div>
+      <div class="question" id="questionText"></div>
+      <div class="answers" id="answers"></div>
 
-</div>
+      <div class="spacer"></div>
+      <button id="nextBtn" class="primary hidden" onclick="nextStep()">Weiter</button>
+    </div>
 
-<script>
+    <div id="betweenScreen" class="card hidden center">
+      <h2 id="betweenTitle">Nächster Spieler</h2>
+      <p id="betweenText"></p>
+      <button class="primary" onclick="continueGame()">Los geht's</button>
+    </div>
 
-const quiz = [
+    <div id="resultScreen" class="card hidden">
+      <h2>Endergebnis</h2>
+      <p class="small">Rangliste aller Spieler</p>
+      <ul id="resultList" class="result-list"></ul>
+      <button class="primary" onclick="restartGame()">Nochmal spielen</button>
+    </div>
+  </div>
 
-{
-question:"Welche Stadt ist die Hauptstadt von Kanada?",
-answers:["Toronto","Ottawa","Montreal","Vancouver"],
-correct:1
-},
+  <script>
+    const quiz = [
+      {
+        question: "Welche Stadt ist die Hauptstadt von Kanada?",
+        answers: ["Toronto", "Ottawa", "Montreal", "Vancouver"],
+        correct: 1
+      },
+      {
+        question: "Wie viele Spieler stehen beim Fußball pro Team auf dem Platz?",
+        answers: ["9", "10", "11", "12"],
+        correct: 2
+      },
+      {
+        question: "Welches Element hat das chemische Symbol O?",
+        answers: ["Gold", "Osmium", "Sauerstoff", "Silber"],
+        correct: 2
+      },
+      {
+        question: "Welcher Planet ist der Sonne am nächsten?",
+        answers: ["Mars", "Merkur", "Venus", "Jupiter"],
+        correct: 1
+      },
+      {
+        question: "In welchem Land liegen die meisten Fjorde?",
+        answers: ["Island", "Schweden", "Norwegen", "Kanada"],
+        correct: 2
+      }
+    ];
 
-{
-question:"Wie viele Spieler stehen beim Fußball pro Team auf dem Platz?",
-answers:["9","10","11","12"],
-correct:2
-},
+    const timePerQuestion = 15;
 
-{
-question:"Welches Element hat das chemische Symbol O?",
-answers:["Gold","Osmium","Sauerstoff","Silber"],
-correct:2
-},
+    let players = [];
+    let currentPlayerIndex = 0;
+    let currentQuestionIndex = 0;
+    let timer = timePerQuestion;
+    let timerInterval = null;
+    let answered = false;
 
-{
-question:"Welcher Planet ist der Sonne am nächsten?",
-answers:["Mars","Merkur","Venus","Jupiter"],
-correct:1
-},
+    const playerCountInput = document.getElementById("playerCount");
+    const playerInputsDiv = document.getElementById("playerInputs");
 
-{
-question:"In welchem Land liegen die meisten Fjorde?",
-answers:["Island","Schweden","Norwegen","Kanada"],
-correct:2
-}
+    const setupScreen = document.getElementById("setupScreen");
+    const quizScreen = document.getElementById("quizScreen");
+    const betweenScreen = document.getElementById("betweenScreen");
+    const resultScreen = document.getElementById("resultScreen");
 
-];
+    const playerInfo = document.getElementById("playerInfo");
+    const scoreInfo = document.getElementById("scoreInfo");
+    const timerInfo = document.getElementById("timerInfo");
+    const questionCount = document.getElementById("questionCount");
+    const questionText = document.getElementById("questionText");
+    const answersDiv = document.getElementById("answers");
+    const nextBtn = document.getElementById("nextBtn");
 
-let currentQuestion = 0;
-let score = 0;
+    const betweenTitle = document.getElementById("betweenTitle");
+    const betweenText = document.getElementById("betweenText");
+    const resultList = document.getElementById("resultList");
 
-function loadQuestion(){
+    function renderPlayerInputs() {
+      const count = Math.max(1, Math.min(20, parseInt(playerCountInput.value) || 1));
+      playerInputsDiv.innerHTML = "";
 
-let q = quiz[currentQuestion];
-document.getElementById("question").innerText = q.question;
+      for (let i = 0; i < count; i++) {
+        const input = document.createElement("input");
+        input.type = "text";
+        input.placeholder = `Name Spieler ${i + 1}`;
+        input.id = `playerName${i}`;
+        input.value = `Spieler ${i + 1}`;
+        playerInputsDiv.appendChild(input);
+      }
+    }
 
-let answersDiv = document.getElementById("answers");
-answersDiv.innerHTML="";
+    playerCountInput.addEventListener("input", renderPlayerInputs);
+    renderPlayerInputs();
 
-q.answers.forEach((answer,index)=>{
+    function startGame() {
+      const count = Math.max(1, Math.min(20, parseInt(playerCountInput.value) || 1));
+      players = [];
 
-let btn = document.createElement("button");
-btn.innerText = answer;
+      for (let i = 0; i < count; i++) {
+        const name = document.getElementById(`playerName${i}`).value.trim() || `Spieler ${i + 1}`;
+        players.push({
+          name,
+          score: 0,
+          correctAnswers: 0
+        });
+      }
 
-btn.onclick = function(){
+      currentPlayerIndex = 0;
+      currentQuestionIndex = 0;
 
-if(index === q.correct){
-btn.style.background="lightgreen";
-score++;
-}
-else{
-btn.style.background="salmon";
-}
+      setupScreen.classList.add("hidden");
+      resultScreen.classList.add("hidden");
+      betweenScreen.classList.remove("hidden");
 
-document.querySelectorAll("#answers button").forEach(b=>b.disabled=true);
-document.getElementById("nextBtn").style.display="block";
+      betweenTitle.textContent = `${players[currentPlayerIndex].name} ist dran`;
+      betweenText.textContent = `Es warten ${quiz.length} Fragen auf dich.`;
+    }
 
-}
+    function continueGame() {
+      betweenScreen.classList.add("hidden");
+      quizScreen.classList.remove("hidden");
+      loadQuestion();
+    }
 
-answersDiv.appendChild(btn);
+    function loadQuestion() {
+      answered = false;
+      nextBtn.classList.add("hidden");
 
-});
+      const currentPlayer = players[currentPlayerIndex];
+      const q = quiz[currentQuestionIndex];
 
-}
+      playerInfo.textContent = `Spieler: ${currentPlayer.name}`;
+      scoreInfo.textContent = `Punkte: ${currentPlayer.score}`;
+      questionCount.textContent = `Frage ${currentQuestionIndex + 1} von ${quiz.length}`;
+      questionText.textContent = q.question;
+      answersDiv.innerHTML = "";
 
-function nextQuestion(){
+      q.answers.forEach((answer, index) => {
+        const btn = document.createElement("button");
+        btn.className = "answer-btn";
+        btn.textContent = answer;
+        btn.onclick = () => answerQuestion(index, btn);
+        answersDiv.appendChild(btn);
+      });
 
-currentQuestion++;
+      startTimer();
+    }
 
-if(currentQuestion < quiz.length){
-loadQuestion();
-document.getElementById("nextBtn").style.display="none";
-}
-else{
-document.querySelector(".quiz-container").innerHTML =
-"<h2>Quiz beendet!</h2><h3>Deine Punkte: "+score+" / "+quiz.length+"</h3>";
-}
+    function startTimer() {
+      clearInterval(timerInterval);
+      timer = timePerQuestion;
+      timerInfo.textContent = `Zeit: ${timer}`;
 
-}
+      timerInterval = setInterval(() => {
+        timer--;
+        timerInfo.textContent = `Zeit: ${timer}`;
 
-loadQuestion();
+        if (timer <= 0) {
+          clearInterval(timerInterval);
+          timeUp();
+        }
+      }, 1000);
+    }
 
-</script>
+    function answerQuestion(selectedIndex, clickedButton) {
+      if (answered) return;
+      answered = true;
+      clearInterval(timerInterval);
 
+      const currentPlayer = players[currentPlayerIndex];
+      const q = quiz[currentQuestionIndex];
+      const buttons = document.querySelectorAll(".answer-btn");
+
+      buttons.forEach((btn, index) => {
+        btn.disabled = true;
+        if (index === q.correct) {
+          btn.classList.add("correct");
+        }
+      });
+
+      if (selectedIndex === q.correct) {
+        clickedButton.classList.add("correct");
+        currentPlayer.score += 1;
+        currentPlayer.correctAnswers += 1;
+      } else {
+        clickedButton.classList.add("wrong");
+      }
+
+      scoreInfo.textContent = `Punkte: ${currentPlayer.score}`;
+      nextBtn.classList.remove("hidden");
+    }
+
+    function timeUp() {
+      if (answered) return;
+      answered = true;
+
+      const q = quiz[currentQuestionIndex];
+      const buttons = document.querySelectorAll(".answer-btn");
+
+      buttons.forEach((btn, index) => {
+        btn.disabled = true;
+        if (index === q.correct) {
+          btn.classList.add("correct");
+        }
+      });
+
+      nextBtn.classList.remove("hidden");
+    }
+
+    function nextStep() {
+      currentQuestionIndex++;
+
+      if (currentQuestionIndex < quiz.length) {
+        loadQuestion();
+        return;
+      }
+
+      currentPlayerIndex++;
+
+      if (currentPlayerIndex < players.length) {
+        currentQuestionIndex = 0;
+        quizScreen.classList.add("hidden");
+        betweenScreen.classList.remove("hidden");
+        betweenTitle.textContent = `${players[currentPlayerIndex].name} ist dran`;
+        betweenText.textContent = `Jetzt spielt der nächste Spieler.`;
+        return;
+      }
+
+      showResults();
+    }
+
+    function showResults() {
+      clearInterval(timerInterval);
+      quizScreen.classList.add("hidden");
+      betweenScreen.classList.add("hidden");
+      resultScreen.classList.remove("hidden");
+
+      const ranking = [...players].sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.name.localeCompare(b.name);
+      });
+
+      resultList.innerHTML = "";
+
+      ranking.forEach((player, index) => {
+        const li = document.createElement("li");
+        li.textContent = `${index + 1}. ${player.name} – ${player.score} / ${quiz.length} Punkte`;
+        resultList.appendChild(li);
+      });
+    }
+
+    function restartGame() {
+      setupScreen.classList.remove("hidden");
+      quizScreen.classList.add("hidden");
+      betweenScreen.classList.add("hidden");
+      resultScreen.classList.add("hidden");
+      clearInterval(timerInterval);
+    }
+  </script>
 </body>
 </html>
